@@ -1,0 +1,18 @@
+// config.js
+module.exports = {
+  // Hii ni URL yako ya tovuti unayotaka kutumia
+  BWM_XMD: 'https://ben-whittaker-tech.onrender.com',  // URL yako ya tovuti ya WhatsApp bot
+
+  // Sifa zako binafsi na sifa za mtumiaji
+  USER_ID: '255760317060',  // ID yako halisi ya mtumiaji (namba ya simu)
+
+  // Jina lako
+  USER_NAME: 'Ben Whittaker',  // Jina lako
+
+  // Sifa za Mhusika ambazo unaweza kubadilisha
+  USER_FEATURES: {
+    fakeTyping: true,      // Sifa ya fake typing (imewashwa)
+    recordVoice: true,     // Sifa ya kurekodi sauti (imewashwa)
+    openViewOnce: false,   // Sifa ya kuifungua viewOnce (imezimwa)
+  },
+};
